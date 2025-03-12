@@ -43,10 +43,18 @@ namespace dso
 
 
 
+//******************************** 光度矫正 ************************************
 
-
-
-
+/**
+ * @function: 光度矫正构造函数
+ * 
+ * @param: 	file          	响应函数参数文件
+ *		 		noiseImage   	
+ *		 		vignetteImage 	辐射衰减图像
+ *				w_, h_			图像大小
+ * 
+ * @note:
+ **/
 PhotometricUndistorter::PhotometricUndistorter(
 		std::string file,
 		std::string noiseImage,
@@ -255,7 +263,7 @@ template void PhotometricUndistorter::processFrame<unsigned short>(unsigned shor
 
 
 
-
+// 矫正基类, 包括几何和光度
 
 Undistort::~Undistort()
 {
@@ -263,6 +271,7 @@ Undistort::~Undistort()
 	if(remapY != 0) delete[] remapY;
 }
 
+// 读取配置文件（相机畸变）
 Undistort* Undistort::getUndistorterForFile(std::string configFilename, std::string gammaFilename, std::string vignetteFilename)
 {
 	printf("Reading Calibration from file %s",configFilename.c_str());
@@ -382,6 +391,7 @@ void Undistort::loadPhotometricCalibration(std::string file, std::string noiseIm
 	photometricUndist = new PhotometricUndistorter(file, noiseImage, vignetteImage,getOriginalSize()[0], getOriginalSize()[1]);
 }
 
+// 得到去除光度参数的图像, 并添加几何和光度噪声
 template<typename T>
 ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float exposure, double timestamp, float factor) const
 {
@@ -585,6 +595,7 @@ void Undistort::applyBlurNoise(float* img) const
 	delete[] noiseMapY;
 }
 
+// 求出最优的矫正后的相机内参
 void Undistort::makeOptimalK_crop()
 {
 	printf("finding CROP optimal new model!\n");
@@ -713,6 +724,7 @@ void Undistort::makeOptimalK_full()
 	assert(false);
 }
 
+// 参数: 配置文件名, 参数个数, 相机模型名称
 void Undistort::readFromFile(const char* configFileName, int nPars, std::string prefix)
 {
 	photometricUndist=0;
@@ -794,6 +806,7 @@ void Undistort::readFromFile(const char* configFileName, int nPars, std::string 
                parsOrg[0], parsOrg[1], parsOrg[2], parsOrg[3],
                parsOrg[0] * wOrg, parsOrg[1] * hOrg, parsOrg[2] * wOrg - 0.5, parsOrg[3] * hOrg - 0.5 );
 
+		// ？类似于中值积分
         // rescale and substract 0.5 offset.
         // the 0.5 is because I'm assuming the calibration is given such that the pixel at (0,0)
         // contains the integral over intensity over [0,0]-[1,1], whereas I assume the pixel (0,0)

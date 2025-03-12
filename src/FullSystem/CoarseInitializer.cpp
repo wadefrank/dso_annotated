@@ -82,6 +82,7 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
 {
 	newFrame = newFrameHessian;
 
+	//[ ***step 1*** ] 先显示新来的帧
     for(IOWrap::Output3DWrapper* ow : wraps)
         ow->pushLiveFrame(newFrameHessian);
 
@@ -94,6 +95,7 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
 	regWeight = 0.8;//*freeDebugParam4;
 	couplingWeight = 1;//*freeDebugParam5;
 
+	//[ ***step 2*** ] 初始化每个点逆深度为1, 初始化光度参数, 位姿SE3
 	if(!snapped)
 	{
 		thisToNext.translation().setZero();
@@ -123,12 +125,14 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
 	{
 
 
-
+		
+		//[ ***step 3*** ] 使用计算过的上一层来初始化下一层
 		if(lvl<pyrLevelsUsed-1)
 			propagateDown(lvl+1);
 
 		Mat88f H,Hsc; Vec8f b,bsc;
 		resetPoints(lvl);
+		//[ ***step 4*** ] 迭代之前计算能量, Hessian等
 		Vec3f resOld = calcResAndGS(lvl, H, b, Hsc, bsc, refToNew_current, refToNew_aff_current, false);
 		applyStep(lvl);
 
@@ -151,6 +155,7 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
 			std::cout << refToNew_current.log().transpose() << " AFF " << refToNew_aff_current.vec().transpose() <<"\n";
 		}
 
+		//[ ***step 5*** ] 迭代求解
 		int iteration=0;
 		while(true)
 		{
@@ -251,6 +256,7 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
 
 
 
+	//[ ***step 6*** ] 优化后赋值位姿, 从底层计算上层点的深度
 	thisToNext = refToNew_current;
 	thisToNext_aff = refToNew_aff_current;
 
@@ -271,7 +277,7 @@ bool CoarseInitializer::trackFrame(FrameHessian* newFrameHessian, std::vector<IO
     debugPlot(0,wraps);
 
 
-
+	// 位移足够大, 再优化5帧才行
 	return snapped && frameID > snappedAt+5;
 }
 
@@ -766,7 +772,7 @@ void CoarseInitializer::makeGradients(Eigen::Vector3f** data)
 }
 void CoarseInitializer::setFirst(	CalibHessian* HCalib, FrameHessian* newFrameHessian)
 {
-
+	//[ ***step 1*** ] 计算图像每层的内参
 	makeK(HCalib);
 	firstFrame = newFrameHessian;
 
@@ -778,7 +784,8 @@ void CoarseInitializer::setFirst(	CalibHessian* HCalib, FrameHessian* newFrameHe
 	float densities[] = {0.03,0.05,0.15,0.5,1};
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
 	{
-		sel.currentPotential = 3;
+		//[ ***step 2*** ] 针对不同层数选择大梯度像素, 第0层比较复杂1d, 2d, 4d大小block来选择3个层次的像素
+		sel.currentPotential = 3;	// 设置pot大小，3*3大小格
 		int npts;
 		if(lvl == 0)
 			npts = sel.makeMaps(firstFrame, statusMap,densities[lvl]*w[0]*h[0],1,false,2);
@@ -794,6 +801,8 @@ void CoarseInitializer::setFirst(	CalibHessian* HCalib, FrameHessian* newFrameHe
 		int wl = w[lvl], hl = h[lvl];
 		Pnt* pl = points[lvl];
 		int nl = 0;
+		
+		//[ ***step 3*** ] 在选出的像素中, 添加点信息
 		for(int y=patternPadding+1;y<hl-patternPadding-2;y++)
 		for(int x=patternPadding+1;x<wl-patternPadding-2;x++)
 		{
@@ -839,7 +848,8 @@ void CoarseInitializer::setFirst(	CalibHessian* HCalib, FrameHessian* newFrameHe
 	}
 	delete[] statusMap;
 	delete[] statusMapB;
-
+	
+	//[ ***step 4*** ] 计算点的最近邻和父点
 	makeNN();
 
 	thisToNext=SE3();

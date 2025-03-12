@@ -117,7 +117,7 @@ public:
 
 
 
-
+		// 支持从zip压缩文件读取
 		if(isZipped)
 		{
 #if HAS_ZIPLIB

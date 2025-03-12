@@ -354,6 +354,7 @@ void parseArgument(char* arg)
 int main( int argc, char** argv )
 {
 	//setlocale(LC_ALL, "");
+	// 从配置文件中读取配置信息
 	for(int i=1; i<argc;i++)
 		parseArgument(argv[i]);
 
@@ -361,6 +362,7 @@ int main( int argc, char** argv )
 	boost::thread exThread = boost::thread(exitThread);
 
 
+	// 文件读取
 	ImageFolderReader* reader = new ImageFolderReader(source,calib, gammaCalib, vignette);
 	reader->setGlobalCalibration();
 
@@ -399,7 +401,7 @@ int main( int argc, char** argv )
 
 
 
-
+	// 主线程是用于显示的线程
     IOWrap::PangolinDSOViewer* viewer = 0;
 	if(!disableAllDisplay)
     {
@@ -468,6 +470,7 @@ int main( int argc, char** argv )
             if(preload)
                 img = preloadedImages[ii];
             else
+				// 得到去畸变之后的图像
                 img = reader->getImage(i);
 
 
@@ -488,7 +491,7 @@ int main( int argc, char** argv )
             }
 
 
-
+			// 整个程序的入口
             if(!skipFrame) fullSystem->addActiveFrame(img, i);
 
 

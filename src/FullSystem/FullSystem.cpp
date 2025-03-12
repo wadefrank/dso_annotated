@@ -798,14 +798,25 @@ void FullSystem::flagPointsForRemoval()
 
 }
 
+/********************************
+ * @function:
+ * 
+ * @param: 	image		标定后的辐照度和曝光时间
+ * @param:	id			
+ * 
+ * @ note: start from here
+ *******************************/
+
 
 void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 {
 
+	//[ ***step 1*** ] track线程锁
     if(isLost) return;
 	boost::unique_lock<boost::mutex> lock(trackMutex);
 
 
+	//[ ***step 2*** ] 创建FrameHessian和FrameShell, 并进行相应初始化, 并存储所有帧
 	// =========================== add into allFrameHistory =========================
 	FrameHessian* fh = new FrameHessian();
 	FrameShell* shell = new FrameShell();
@@ -818,6 +829,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 	allFrameHistory.push_back(shell);
 
 
+	//[ ***step 3*** ] 得到曝光时间, 生成金字塔, 计算整个图像梯度
 	// =========================== make Images / derivatives etc. =========================
 	fh->ab_exposure = image->exposure_time;
     fh->makeImages(image->image, &Hcalib);
@@ -825,9 +837,11 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
 
 
+	//[ ***step 4*** ] 进行初始化
 	if(!initialized)
 	{
 		// use initializer!
+		//[ ***step 4.1*** ] 加入第一帧
 		if(coarseInitializer->frameID<0)	// first frame set. fh is kept by coarseInitializer.
 		{
 
@@ -835,7 +849,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 		}
 		else if(coarseInitializer->trackFrame(fh, outputWrapper))	// if SNAPPED
 		{
-
+			//[ ***step 4.2*** ] 跟踪成功, 完成初始化
 			initializeFromInitializer(fh);
 			lock.unlock();
 			deliverTrackedFrame(fh, true);
@@ -850,6 +864,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 	}
 	else	// do front-end operation.
 	{
+		//[ ***step 5*** ] 对新来的帧进行跟踪, 得到位姿光度, 判断跟踪状态
 		// =========================== SWAP tracking reference?. =========================
 		if(coarseTracker_forNewKF->refFrameID > coarseTracker->refFrameID)
 		{
@@ -1195,11 +1210,12 @@ void FullSystem::makeKeyFrame( FrameHessian* fh)
 
 }
 
-
+// 从初始化中提取出信息, 用于跟踪.
 void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 {
 	boost::unique_lock<boost::mutex> lock(mapMutex);
 
+	//[ ***step 1*** ] 把第一帧设置成关键帧, 加入队列, 加入EnergyFunctional
 	// add firstframe.
 	FrameHessian* firstFrame = coarseInitializer->firstFrame;
 	firstFrame->idx = frameHessians.size();
@@ -1217,6 +1233,7 @@ void FullSystem::initializeFromInitializer(FrameHessian* newFrame)
 	firstFrame->pointHessiansOut.reserve(wG[0]*hG[0]*0.2f);
 
 
+	//[ ***step 2*** ] 求出平均尺度因子
 	float sumID=1e-5, numID=1e-5;
 	for(int i=0;i<coarseInitializer->numPoints[0];i++)
 	{
