@@ -27,19 +27,29 @@
 #include "util/settings.h"
 #include "util/NumType.h"
 
+// dso全局变量（带有后缀G），PYR_LEVELS为金字塔的最大层数
 namespace dso
 {
+	// 每一层图像金字塔的宽和高
 	extern int wG[PYR_LEVELS], hG[PYR_LEVELS];
+
+	// 每一层图像金字塔内参中的：fx、fy、cx、cy
 	extern float fxG[PYR_LEVELS], fyG[PYR_LEVELS],
 		  cxG[PYR_LEVELS], cyG[PYR_LEVELS];
 
+	// 每一层图像金字塔内参的逆（inverse）中的：fxi、fyi、cxi、cyi
 	extern float fxiG[PYR_LEVELS], fyiG[PYR_LEVELS],
 		  cxiG[PYR_LEVELS], cyiG[PYR_LEVELS];
 
+	// 每一层图像金字塔内参K，以及内参的逆Ki
 	extern Eigen::Matrix3f KG[PYR_LEVELS],KiG[PYR_LEVELS];
 
+	// 第一层图图像金字塔的宽减去3
 	extern float wM3G;
+
+	// 第一层图图像金字塔的高减去3
 	extern float hM3G;
 
+	// 设置以上全局变量
 	void setGlobalCalib(int w, int h, const Eigen::Matrix3f &K );
 }

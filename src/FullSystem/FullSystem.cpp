@@ -70,13 +70,14 @@ FullSystem::FullSystem()
 	int retstat =0;
 	if(setting_logStuff)
 	{
-
+		// shell命令删除旧的文件夹, 创建新的
 		retstat += system("rm -rf logs");
 		retstat += system("mkdir logs");
 
 		retstat += system("rm -rf mats");
 		retstat += system("mkdir mats");
 
+		// 打开读写log文件
 		calibLog = new std::ofstream();
 		calibLog->open("logs/calibLog.txt", std::ios::trunc | std::ios::out);
 		calibLog->precision(12);
@@ -126,7 +127,7 @@ FullSystem::FullSystem()
 		calibLog=0;
 	}
 
-	assert(retstat!=293847);
+	assert(retstat!=293847);	// shell正常执行结束返回这么个值,填充8~15位bit, 有趣
 
 
 
@@ -147,7 +148,7 @@ FullSystem::FullSystem()
 	statistics_numMargResFwd = 0;
 	statistics_numMargResBwd = 0;
 
-	lastCoarseRMSE.setConstant(100);
+	lastCoarseRMSE.setConstant(100);	//5维向量都=100
 
 	currentMinActDist=2;
 	initialized=false;
@@ -164,7 +165,7 @@ FullSystem::FullSystem()
 
 	linearizeOperation=true;
 	runMapping=true;
-	mappingThread = boost::thread(&FullSystem::mappingLoop, this);
+	mappingThread = boost::thread(&FullSystem::mappingLoop, this);	// 建图线程单开
 	lastRefStopID=0;
 
 
@@ -267,7 +268,7 @@ void FullSystem::printResult(std::string file)
 	myfile.close();
 }
 
-
+// 使用确定的运动模型对新来的一帧进行跟踪, 得到位姿和光度参数
 Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 {
 
@@ -279,28 +280,29 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 
 
 
-	FrameHessian* lastF = coarseTracker->lastRef;
+	FrameHessian* lastF = coarseTracker->lastRef;	// 参考帧
 
 	AffLight aff_last_2_l = AffLight(0,0);
 
+	//[ ***step 1*** ] 设置不同的运动状态
 	std::vector<SE3,Eigen::aligned_allocator<SE3>> lastF_2_fh_tries;
 	if(allFrameHistory.size() == 2)
 		for(unsigned int i=0;i<lastF_2_fh_tries.size();i++) lastF_2_fh_tries.push_back(SE3());
 	else
 	{
-		FrameShell* slast = allFrameHistory[allFrameHistory.size()-2];
-		FrameShell* sprelast = allFrameHistory[allFrameHistory.size()-3];
+		FrameShell* slast = allFrameHistory[allFrameHistory.size()-2];		// 上一帧
+		FrameShell* sprelast = allFrameHistory[allFrameHistory.size()-3];	// 上上一帧
 		SE3 slast_2_sprelast;
 		SE3 lastF_2_slast;
 		{	// lock on global pose consistency!
 			boost::unique_lock<boost::mutex> crlock(shellPoseMutex);
-			slast_2_sprelast = sprelast->camToWorld.inverse() * slast->camToWorld;
-			lastF_2_slast = slast->camToWorld.inverse() * lastF->shell->camToWorld;
+			slast_2_sprelast = sprelast->camToWorld.inverse() * slast->camToWorld;	// 上一帧和上上一帧的运动
+			lastF_2_slast = slast->camToWorld.inverse() * lastF->shell->camToWorld;	// 参考帧到上一帧运动
 			aff_last_2_l = slast->aff_g2l;
 		}
-		SE3 fh_2_slast = slast_2_sprelast;// assumed to be the same as fh_2_slast.
+		SE3 fh_2_slast = slast_2_sprelast;// assumed to be the same as fh_2_slast.	// 当前帧到上一帧 = 上一帧和大上一帧的
 
-
+		// 尝试不同的平移（5种）
 		// get last delta-movement.
 		lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast);	// assume constant motion.
 		lastF_2_fh_tries.push_back(fh_2_slast.inverse() * fh_2_slast.inverse() * lastF_2_slast);	// assume double motion (frame skipped)
@@ -308,7 +310,7 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 		lastF_2_fh_tries.push_back(lastF_2_slast); // assume zero motion.
 		lastF_2_fh_tries.push_back(SE3()); // assume zero motion FROM KF.
 
-
+		// 尝试不同的旋转（26种）
 		// just try a TON of different initializations (all rotations). In the end,
 		// if they don't work they will only be tried on the coarsest level, which is super fast anyway.
 		// also, if tracking rails here we loose, so we really, really want to avoid that.
@@ -342,6 +344,7 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 			lastF_2_fh_tries.push_back(fh_2_slast.inverse() * lastF_2_slast * SE3(Sophus::Quaterniond(1,rotDelta,rotDelta,rotDelta), Vec3(0,0,0)));	// assume constant motion.
 		}
 
+		// 有不合法的
 		if(!slast->poseValid || !sprelast->poseValid || !lastF->shell->poseValid)
 		{
 			lastF_2_fh_tries.clear();
@@ -358,14 +361,18 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 	// as long as maxResForImmediateAccept is not reached, I'll continue through the options.
 	// I'll keep track of the so-far best achieved residual for each level in achievedRes.
 	// If on a coarse level, tracking is WORSE than achievedRes, we will not continue to save time.
-
+	// 把到目前为止最好的残差值作为每一层的阈值
+	// 粗层的能量值大, 也不继续优化了, 来节省时间
 
 	Vec5 achievedRes = Vec5::Constant(NAN);
 	bool haveOneGood = false;
 	int tryIterations=0;
+	
+	// 逐个尝试
 	for(unsigned int i=0;i<lastF_2_fh_tries.size();i++)
 	{
-		AffLight aff_g2l_this = aff_last_2_l;
+		//[ ***step 2*** ] 尝试不同的运动状态, 得到跟踪是否良好
+		AffLight aff_g2l_this = aff_last_2_l;	// 上一帧的赋值当前帧
 		SE3 lastF_2_fh_this = lastF_2_fh_tries[i];
 		bool trackingIsGood = coarseTracker->trackNewestCoarse(
 				fh, lastF_2_fh_this, aff_g2l_this,
@@ -391,7 +398,7 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 					coarseTracker->lastResiduals[4]);
 		}
 
-
+		//[ ***step 3*** ] 如果跟踪正常, 并且0层残差比最好的还好留下位姿, 保存最好的每一层的能量值
 		// do we have a new winner?
 		if(trackingIsGood && std::isfinite((float)coarseTracker->lastResiduals[0]) && !(coarseTracker->lastResiduals[0] >=  achievedRes[0]))
 		{
@@ -408,11 +415,11 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 			for(int i=0;i<5;i++)
 			{
 				if(!std::isfinite((float)achievedRes[i]) || achievedRes[i] > coarseTracker->lastResiduals[i])	// take over if achievedRes is either bigger or NAN.
-					achievedRes[i] = coarseTracker->lastResiduals[i];
+					achievedRes[i] = coarseTracker->lastResiduals[i];	 // 里面保存的是各层得到的能量值
 			}
 		}
 
-
+		//[ ***step 4*** ] 小于阈值则暂停, 并且为下次设置阈值
         if(haveOneGood &&  achievedRes[0] < lastCoarseRMSE[0]*setting_reTrackThreshold)
             break;
 
@@ -425,9 +432,12 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 		aff_g2l = aff_last_2_l;
 		lastF_2_fh = lastF_2_fh_tries[0];
 	}
-
+	
+	// 把这次得到的最好值给下次用来当阈值
 	lastCoarseRMSE = achievedRes;
 
+
+	//[ ***step 5*** ] 此时shell在跟踪阶段, 没人使用, 设置值
 	// no lock required, as fh is not used anywhere yet.
 	fh->shell->camToTrackingRef = lastF_2_fh.inverse();
 	fh->shell->trackingRef = lastF->shell;
@@ -436,7 +446,7 @@ Vec4 FullSystem::trackNewCoarse(FrameHessian* fh)
 
 
 	if(coarseTracker->firstCoarseRMSE < 0)
-		coarseTracker->firstCoarseRMSE = achievedRes[0];
+		coarseTracker->firstCoarseRMSE = achievedRes[0];	 // 第一次跟踪的平均能量值
 
     if(!setting_debugout_runquiet)
         printf("Coarse Tracker tracked ab = %f %f (exp %f). Res %f!\n", aff_g2l.a, aff_g2l.b, fh->ab_exposure, achievedRes[0]);
@@ -868,11 +878,12 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 		// =========================== SWAP tracking reference?. =========================
 		if(coarseTracker_forNewKF->refFrameID > coarseTracker->refFrameID)
 		{
+			// 交换参考帧和当前帧的coarseTracker
 			boost::unique_lock<boost::mutex> crlock(coarseTrackerSwapMutex);
 			CoarseTracker* tmp = coarseTracker; coarseTracker=coarseTracker_forNewKF; coarseTracker_forNewKF=tmp;
 		}
 
-
+		//TODO 使用旋转和位移对像素移动的作用比来判断运动状态
 		Vec4 tres = trackNewCoarse(fh);
 		if(!std::isfinite((double)tres[0]) || !std::isfinite((double)tres[1]) || !std::isfinite((double)tres[2]) || !std::isfinite((double)tres[3]))
         {
@@ -881,8 +892,9 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
             return;
         }
 
+		//[ ***step 6*** ] 判断是否插入关键帧
 		bool needToMakeKF = false;
-		if(setting_keyframesPerSecond > 0)
+		if(setting_keyframesPerSecond > 0)	// 每隔多久插入关键帧
 		{
 			needToMakeKF = allFrameHistory.size()== 1 ||
 					(fh->shell->timestamp - allKeyFramesHistory.back()->timestamp) > 0.95f/setting_keyframesPerSecond;
@@ -894,11 +906,11 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
 			// BRIGHTNESS CHECK
 			needToMakeKF = allFrameHistory.size()== 1 ||
-					setting_kfGlobalWeight*setting_maxShiftWeightT *  sqrtf((double)tres[1]) / (wG[0]+hG[0]) +
-					setting_kfGlobalWeight*setting_maxShiftWeightR *  sqrtf((double)tres[2]) / (wG[0]+hG[0]) +
-					setting_kfGlobalWeight*setting_maxShiftWeightRT * sqrtf((double)tres[3]) / (wG[0]+hG[0]) +
-					setting_kfGlobalWeight*setting_maxAffineWeight * fabs(logf((float)refToFh[0])) > 1 ||
-					2*coarseTracker->firstCoarseRMSE < tres[0];
+					setting_kfGlobalWeight*setting_maxShiftWeightT *  sqrtf((double)tres[1]) / (wG[0]+hG[0]) +	// 平移像素位移
+					setting_kfGlobalWeight*setting_maxShiftWeightR *  sqrtf((double)tres[2]) / (wG[0]+hG[0]) +	// TODO 旋转像素位移, 设置为0???
+					setting_kfGlobalWeight*setting_maxShiftWeightRT * sqrtf((double)tres[3]) / (wG[0]+hG[0]) +	// 旋转+平移像素位移
+					setting_kfGlobalWeight*setting_maxAffineWeight * fabs(logf((float)refToFh[0])) > 1 ||		// 光度变化大
+					2*coarseTracker->firstCoarseRMSE < tres[0];	// 误差能量变化太大(最初的两倍)
 
 		}
 
@@ -910,7 +922,7 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
 
 
-
+		//[ ***step 7*** ] 把该帧发布出去
 		lock.unlock();
 		deliverTrackedFrame(fh, needToMakeKF);
 		return;

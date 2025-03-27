@@ -51,17 +51,17 @@
 #include "IOWrapper/OutputWrapper/SampleOutputWrapper.h"
 
 
-std::string vignette = "";
-std::string gammaCalib = "";
-std::string source = "";
-std::string calib = "";
+std::string vignette = "";		// 光度标定文件（vignette）路径，vignette=XXXXX/sequence_XX/vignette.png
+std::string gammaCalib = "";	// 光度标定文件（gamma）路径，gamma=XXXXX/sequence_XX/pcalib.txt
+std::string source = "";		// 图像文件路径，files=XXXXX/sequence_XX/images.zip
+std::string calib = "";			// 相机内参文件路径，calib=XXXXX/sequence_XX/camera.txt
 double rescale = 1;
-bool reverse = false;
+bool reverse = false;			// 当值为true时，反向播放序列
 bool disableROS = false;
-int start=0;
-int end=100000;
-bool prefetch = false;
-float playbackSpeed=0;	// 0 for linearize (play as fast as possible, while sequentializing tracking & mapping). otherwise, factor on timestamps.
+int start=0;					// 起始帧id
+int end=100000;					// 结束帧id
+bool prefetch = false;			// 当值为true时，在运行DSO之前，将所有图像加载到内存中并校正所有图像
+float playbackSpeed=0;			// 0 for linearize (play as fast as possible, while sequentializing tracking & mapping). otherwise, factor on timestamps.
 bool preload=false;
 bool useSampleOutput=false;
 
@@ -361,9 +361,15 @@ int main( int argc, char** argv )
 	// hook crtl+C.
 	boost::thread exThread = boost::thread(exitThread);
 
-
-	// 文件读取
+	/***********************************从文件中读取数据***********************************/
+	// 从images.zip文件中读取所有图像文件名字，保存在reader->files（变量类型：std::vector<std::string>）
+	// 从camera.txt文件中读取相机内参，保存在reader->undistort中
+	// 从pcalib.txt文件中读取光度标定参数（gamma），保存在reader->undistort->photometricUndist->G（变量类型：float*）
+	// 从vignette.png文件中读取光度标定参数（vignette），保存在reader->undistort->photometricUndist->vignetteMap（变量类型：float*）
+	// 从times.txt文件中读取相机时间戳和曝光时间，保存在reader->timestamps和reader->timestamps中
 	ImageFolderReader* reader = new ImageFolderReader(source,calib, gammaCalib, vignette);
+	
+	// 设置全局变量，全局变量保存在util/globalCalib.h中
 	reader->setGlobalCalibration();
 
 
@@ -419,8 +425,8 @@ int main( int argc, char** argv )
 
     // to make MacOS happy: run this in dedicated thread -- and use this one to run the GUI.
     std::thread runthread([&]() {
-        std::vector<int> idsToPlay;
-        std::vector<double> timesToPlayAt;
+        std::vector<int> idsToPlay;			// 保存所有满足条件的图像帧id
+        std::vector<double> timesToPlayAt;	
         for(int i=lstart;i>= 0 && i< reader->getNumImages() && linc*i < linc*lend;i+=linc)
         {
             idsToPlay.push_back(i);

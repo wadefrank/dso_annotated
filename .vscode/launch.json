@@ -1,0 +1,32 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Debug DSO",
+        "type": "cppdbg",
+        "request": "launch",
+        "program": "${workspaceFolder}/build/bin/dso_dataset",  // 可执行文件路径
+        "args": [
+          "files=${workspaceFolder}/data/sequence_25/images.zip",       // 数据集路径
+          "calib=${workspaceFolder}/data/sequence_25/camera.txt",       // 相机内参文件路径
+          "gamma=${workspaceFolder}/data/sequence_25/pcalib.txt",       // 相机光度参数文件路径(gamma)
+          "vignette=${workspaceFolder}/data/sequence_25/vignette.png",  // 相机光度参数文件路径(vignette)
+          "mode=0",                                                     // 是否使用标定好的光度参数(0-有光度标定参数，1-没有光度标定参数，2-没有光度标定)
+          "preset=0"                                                    // 是否实时运行(0-不强制实时运行（2k pts），1-强制实时运行（2k pts），2-不强制实时运行（800pts），3-强制5x实时运行（800pts）)
+        ],
+        "stopAtEntry": false,
+        "cwd": "${workspaceFolder}",
+        "environment": [],
+        "externalConsole": false,
+        "MIMode": "gdb",
+        "setupCommands": [
+          {
+            "description": "Enable pretty-printing for gdb",
+            "text": "-enable-pretty-printing",
+            "ignoreFailures": true
+          }
+        ],
+        // "preLaunchTask": "build-dso"  // 调试前自动编译
+      }
+    ]
+}

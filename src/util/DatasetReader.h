@@ -117,7 +117,7 @@ public:
 
 
 
-		// 支持从zip压缩文件读取
+		// 支持从zip压缩文件读取所有图像文件名
 		if(isZipped)
 		{
 #if HAS_ZIPLIB
@@ -150,6 +150,7 @@ public:
 			getdir (path, files);
 
 
+		// 读取相机内参、相机光度标定参数（gamma和vignette）
 		undistort = Undistort::getUndistorterForFile(calibFile, gammaFile, vignetteFile);
 
 
