@@ -12,15 +12,26 @@ set(EXECUTABLE_OUTPUT_PATH bin)
 set(LIBRARY_OUTPUT_PATH lib)
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
+set(EIGEN3_INCLUDE_DIR "/home/wade/third_party/eigen-3.3.9/install/include/eigen3")
+set(OpenCV_DIR "/home/wade/third_party/opencv-3.3.1/install/share/OpenCV")
+set(Pangolin_DIR "/home/wade/third_party/Pangolin-0.6/install/lib/cmake/Pangolin")
+
 # required libraries
 find_package(SuiteParse REQUIRED)
-find_package(Eigen3 REQUIRED)
+find_package(Eigen3 3.3.9 REQUIRED)
 find_package(Boost COMPONENTS system thread) 
 
 # optional libraries
 find_package(LibZip QUIET)
-find_package(Pangolin 0.2 QUIET)
-find_package(OpenCV QUIET)
+find_package(Pangolin 0.6 REQUIRED)
+find_package(OpenCV 3.3.1 REQUIRED)
+
+message(STATUS "Eigen3 version: ${Eigen_VERSION}")
+message(STATUS "Eigen3 include dir: ${EIGEN3_INCLUDE_DIR}")
+message(STATUS "OpenCV version: ${OpenCV_VERSION}")
+message(STATUS "OpenCV include dirs: ${OpenCV_INCLUDE_DIRS}")
+message(STATUS "Pangolin version: ${Pangolin_VERSION}")
+message(STATUS "Pangolin include dirs: ${Pangolin_INCLUDE_DIRS}")
 
 # flags
 add_definitions("-DENABLE_SSE")
