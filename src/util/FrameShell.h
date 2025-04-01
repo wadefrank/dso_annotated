@@ -44,15 +44,15 @@ public:
 	FrameShell* trackingRef;
 
 	// constantly adapted.
-	SE3 camToWorld;				// Write: TRACKING, while frame is still fresh; MAPPING: only when locked [shellPoseMutex].
-	AffLight aff_g2l;
+	SE3 camToWorld;						// Write: TRACKING, while frame is still fresh; MAPPING: only when locked [shellPoseMutex].
+	AffLight aff_g2l;					// 
 	bool poseValid;
 
 	// statisitcs
 	int statistics_outlierResOnThis;
 	int statistics_goodResOnThis;
-	int marginalizedAt;
-	double movedByOpt;
+	int marginalizedAt;					// 被边缘化时最新关键帧的id
+	double movedByOpt;					// 边缘化时得到的距离线性化点位姿的6维模
 
 
 	inline FrameShell()

@@ -72,13 +72,26 @@ ImmaturePoint::~ImmaturePoint()
  * * UPDATED -> point has been updated.
  * * SKIP -> point has not been updated.
  */
+
+
+/**
+ * @brief 使用深度滤波对未成熟点进行深度估计
+ * 
+ * @param frame 				当前帧
+ * @param hostToFrame_KRKi 
+ * @param hostToFrame_Kt 
+ * @param hostToFrame_affine 
+ * @param HCalib 
+ * @param debugPrint 
+ * @return ImmaturePointStatus 
+ */
 ImmaturePointStatus ImmaturePoint::traceOn(FrameHessian* frame,const Mat33f &hostToFrame_KRKi, const Vec3f &hostToFrame_Kt, const Vec2f& hostToFrame_affine, CalibHessian* HCalib, bool debugPrint)
 {
 	if(lastTraceStatus == ImmaturePointStatus::IPS_OOB) return lastTraceStatus;
 
 
 	debugPrint = false;//rand()%100==0;
-	float maxPixSearch = (wG[0]+hG[0])*setting_maxPixSearch;
+	float maxPixSearch = (wG[0]+hG[0])*setting_maxPixSearch;	// 极限搜索的最大长度
 
 	if(debugPrint)
 		printf("trace pt (%.1f %.1f) from frame %d to %d. Range %f -> %f. t %f %f %f!\n",

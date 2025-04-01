@@ -169,9 +169,9 @@ struct FrameHessian
 	MinimalImageB3* debugImage;
 
 
-    inline Vec6 w2c_leftEps() const {return get_state_scaled().head<6>();}
-    inline AffLight aff_g2l() const {return AffLight(get_state_scaled()[6], get_state_scaled()[7]);}
-    inline AffLight aff_g2l_0() const {return AffLight(get_state_zero()[6]*SCALE_A, get_state_zero()[7]*SCALE_B);}
+    inline Vec6 w2c_leftEps() const {return get_state_scaled().head<6>();}											//!< 返回位姿状态增量
+    inline AffLight aff_g2l() const {return AffLight(get_state_scaled()[6], get_state_scaled()[7]);}				//!< 返回光度仿射系数
+    inline AffLight aff_g2l_0() const {return AffLight(get_state_zero()[6]*SCALE_A, get_state_zero()[7]*SCALE_B);}	//!< 返回线性化点处的仿射系数增量
 
 
 
@@ -296,25 +296,30 @@ struct FrameHessian
 
 };
 
+/**
+ * @brief 相机内参Hessian, 响应函数
+ */
 struct CalibHessian
 {
 	EIGEN_MAKE_ALIGNED_OPERATOR_NEW;
 	static int instanceCounter;
 
-	VecC value_zero;
-	VecC value_scaled;
-	VecCf value_scaledf;
-	VecCf value_scaledi;
-	VecC value;
-	VecC step;
-	VecC step_backup;
-	VecC value_backup;
-	VecC value_minus_value_zero;
+	// #define CPARS 4
+	// typedef Eigen::Matrix<double,CPARS,1> VecC;
+	VecC value_zero;				//!< FEJ固定点
+	VecC value_scaled;				//!< 内参（乘以scale）
+	VecCf value_scaledf;			//!< float型的内参（乘以scale）
+	VecCf value_scaledi;			//!< 内参的逆（乘以scale），用于求导使用
+	VecC value;						//!< 内参
+	VecC step;						//!< 迭代中的增量
+	VecC step_backup;				//!< 上一次增量备份
+	VecC value_backup;				//!< 上一次值的备份
+	VecC value_minus_value_zero;	//!< 减去线性化点
 
     inline ~CalibHessian() {instanceCounter--;}
 	inline CalibHessian()
 	{
-
+		// 初始化内参
 		VecC initial_value = VecC::Zero();
 		initial_value[0] = fxG[0];
 		initial_value[1] = fyG[0];
@@ -326,6 +331,8 @@ struct CalibHessian
 		value_minus_value_zero.setZero();
 
 		instanceCounter++;
+
+		// 相应函数
 		for(int i=0;i<256;i++)
 			Binv[i] = B[i] = i;		// set gamma function to identity
 	};

@@ -155,7 +155,7 @@ public:
 
 	bool isLost;
 	bool initFailed;
-	bool initialized;
+	bool initialized;			//!< 是否完成初始化
 	bool linearizeOperation;
 
 
@@ -252,29 +252,29 @@ private:
 
 
 	// =================== changed by tracker-thread. protected by trackMutex ============
-	boost::mutex trackMutex;
-	std::vector<FrameShell*> allFrameHistory;
-	CoarseInitializer* coarseInitializer;
-	Vec5 lastCoarseRMSE;
+	boost::mutex trackMutex;							//!< tracking线程锁
+	std::vector<FrameShell*> allFrameHistory;			//!< 所有的历史帧
+	CoarseInitializer* coarseInitializer;				//!< 粗糙初始化器
+	Vec5 lastCoarseRMSE;								//!< 上一次跟踪的平均chi2
 
 
 	// ================== changed by mapper-thread. protected by mapMutex ===============
 	boost::mutex mapMutex;
-	std::vector<FrameShell*> allKeyFramesHistory;
+	std::vector<FrameShell*> allKeyFramesHistory;		//!< Mapping 线程锁
 
-	EnergyFunctional* ef;
-	IndexThreadReduce<Vec10> treadReduce;
+	EnergyFunctional* ef;								//!< 能量方程
+	IndexThreadReduce<Vec10> treadReduce;				//!< 多线程
 
 	float* selectionMap;
 	PixelSelector* pixelSelector;
 	CoarseDistanceMap* coarseDistanceMap;
 
-	std::vector<FrameHessian*> frameHessians;	// ONLY changed in marginalizeFrame and addFrame.
-	std::vector<PointFrameResidual*> activeResiduals;
-	float currentMinActDist;
+	std::vector<FrameHessian*> frameHessians;			//!< 关键帧 ONLY changed in marginalizeFrame and addFrame.
+	std::vector<PointFrameResidual*> activeResiduals;	//!< 新加入的激活点的残差
+	float currentMinActDist;							//!<　激活点的阈值
 
 
-	std::vector<float> allResVec;
+	std::vector<float> allResVec;						//!< 所有在当前最近帧上的残差值
 
 
 

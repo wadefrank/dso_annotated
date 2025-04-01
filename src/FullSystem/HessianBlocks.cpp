@@ -124,30 +124,37 @@ void FrameHessian::release()
 	immaturePoints.clear();
 }
 
-
+/**
+ * @brief 计算各层金字塔的像素值和梯度
+ * 
+ * @param color 	图像irradiance
+ * @param HCalib 	相机内参和响应函数
+ */
 void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 {
-
+	// 对每一层创建图像值和图像梯度的存储空间
 	for(int i=0;i<pyrLevelsUsed;i++)
 	{
-		dIp[i] = new Eigen::Vector3f[wG[i]*hG[i]];
-		absSquaredGrad[i] = new float[wG[i]*hG[i]];
+		dIp[i] = new Eigen::Vector3f[wG[i]*hG[i]];	// 图像irradiance
+		absSquaredGrad[i] = new float[wG[i]*hG[i]];	// 图像梯度
 	}
-	dI = dIp[0];
+
+	dI = dIp[0];	// dI表示第0层图像irradiance
 
 
 	// make d0
-	int w=wG[0];
-	int h=hG[0];
+	int w=wG[0];	// w表示第0层的宽
+	int h=hG[0];	// h表示第0层的高
+	
 	for(int i=0;i<w*h;i++)
 		dI[i][0] = color[i];
 
 	for(int lvl=0; lvl<pyrLevelsUsed; lvl++)
 	{
-		int wl = wG[lvl], hl = hG[lvl];
-		Eigen::Vector3f* dI_l = dIp[lvl];
+		int wl = wG[lvl], hl = hG[lvl];			// wl和hl分别表示第lvl层的宽和高
+		Eigen::Vector3f* dI_l = dIp[lvl];		// dI_l表示第lvl层的图像irradiance
 
-		float* dabs_l = absSquaredGrad[lvl];
+		float* dabs_l = absSquaredGrad[lvl];	// dabs_l表示第lvl层的图像梯度
 		if(lvl>0)
 		{
 			int lvlm1 = lvl-1;
@@ -155,7 +162,7 @@ void FrameHessian::makeImages(float* color, CalibHessian* HCalib)
 			Eigen::Vector3f* dI_lm = dIp[lvlm1];
 
 
-
+			// 像素4合1, 生成金字塔
 			for(int y=0;y<hl;y++)
 				for(int x=0;x<wl;x++)
 				{

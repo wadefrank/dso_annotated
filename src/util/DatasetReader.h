@@ -280,7 +280,13 @@ private:
 		}
 	}
 
-
+	/**
+	 * @brief 根据图像id取出图像
+	 * 
+	 * @param id 		图像id
+	 * @param unused 	
+	 * @return ImageAndExposure* 
+	 */
 	ImageAndExposure* getImage_internal(int id, int unused)
 	{
 		MinimalImageB* minimg = getImageRaw_internal(id, 0);

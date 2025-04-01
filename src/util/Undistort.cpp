@@ -391,7 +391,16 @@ void Undistort::loadPhotometricCalibration(std::string file, std::string noiseIm
 	photometricUndist = new PhotometricUndistorter(file, noiseImage, vignetteImage,getOriginalSize()[0], getOriginalSize()[1]);
 }
 
-// 得到去除光度参数的图像, 并添加几何和光度噪声
+/**
+ * @brief 得到去除光度参数的图像, 并添加几何和光度噪声
+ * 
+ * @tparam T 
+ * @param image_raw 
+ * @param exposure 
+ * @param timestamp 
+ * @param factor 
+ * @return ImageAndExposure* 
+ */
 template<typename T>
 ImageAndExposure* Undistort::undistort(const MinimalImage<T>* image_raw, float exposure, double timestamp, float factor) const
 {

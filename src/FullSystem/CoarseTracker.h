@@ -78,14 +78,14 @@ public:
     void debugPlotIDepthMap(float* minID, float* maxID, std::vector<IOWrap::Output3DWrapper*> &wraps);
     void debugPlotIDepthMapFloat(std::vector<IOWrap::Output3DWrapper*> &wraps);
 
-	FrameHessian* lastRef;
+	FrameHessian* lastRef;		//!< 参考帧
 	AffLight lastRef_aff_g2l;
-	FrameHessian* newFrame;
+	FrameHessian* newFrame;		//!< 当前帧
 	int refFrameID;
 
 	// act as pure ouptut
-	Vec5 lastResiduals;
-	Vec3 lastFlowIndicators;
+	Vec5 lastResiduals;			//!< 上一次优化的平均残差
+	Vec3 lastFlowIndicators;	//!< 光流指示用, 只有平移和, 旋转+平移的像素移动 [resOld[2], resOld[3], resOld[4]]
 	double firstCoarseRMSE;
 private:
 

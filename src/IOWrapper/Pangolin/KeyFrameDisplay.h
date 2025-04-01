@@ -86,7 +86,7 @@ public:
 
 	int id;
 	bool active;
-	SE3 camToWorld;
+	SE3 camToWorld;		//!< 相机到世界系的变换T_w_c
 
     inline bool operator < (const KeyFrameDisplay& other) const
     {
