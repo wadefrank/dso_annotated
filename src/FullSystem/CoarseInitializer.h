@@ -97,8 +97,8 @@ public:
 	SE3 thisToNext;
 
 
-	FrameHessian* firstFrame;
-	FrameHessian* newFrame;
+	FrameHessian* firstFrame;	//!< 第一帧
+	FrameHessian* newFrame;		//!< track中新加入的帧
 private:
 	Mat33 K[PYR_LEVELS];
 	Mat33 Ki[PYR_LEVELS];

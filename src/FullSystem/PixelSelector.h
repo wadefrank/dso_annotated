@@ -198,7 +198,7 @@ inline int gridMaxSelection(Eigen::Vector3f* grads, bool* map_out, int w, int h,
 
 inline int makePixelStatus(Eigen::Vector3f* grads, bool* map, int w, int h, float desiredDensity, int recsLeft=5, float THFac = 1)
 {
-	if(sparsityFactor < 1) sparsityFactor = 1;
+	if(sparsityFactor < 1) sparsityFactor = 1;	// 网格的大小, 在网格内选择最大的
 
 	int numGoodPoints;
 
@@ -223,16 +223,16 @@ inline int makePixelStatus(Eigen::Vector3f* grads, bool* map, int w, int h, floa
 
 	float quotia = numGoodPoints / (float)(desiredDensity);
 
-	int newSparsity = (sparsityFactor * sqrtf(quotia))+0.7f;
+	int newSparsity = (sparsityFactor * sqrtf(quotia))+0.7f; // 更新网格大小
 
 
 	if(newSparsity < 1) newSparsity=1;
 
 
 	float oldTHFac = THFac;
-	if(newSparsity==1 && sparsityFactor==1) THFac = 0.5;
+	if(newSparsity==1 && sparsityFactor==1) THFac = 0.5;	// 已经是最小的了, 但是数目还是不够, 就减小阈值
 
-
+	// 如果满足网格大小变化小且阈值是0.5 || 点数量在20%误差内 || 递归次数已到 , 则返回
 	if((abs(newSparsity-sparsityFactor) < 1 && THFac==oldTHFac) ||
 			( quotia > 0.8 &&  1.0f / quotia > 0.8) ||
 			recsLeft == 0)
@@ -243,7 +243,7 @@ inline int makePixelStatus(Eigen::Vector3f* grads, bool* map, int w, int h, floa
 		sparsityFactor = newSparsity;
 		return numGoodPoints;
 	}
-	else
+	else	// 否则进行递归
 	{
 //		printf(" -> re-evaluate! \n");
 		// re-evaluate.

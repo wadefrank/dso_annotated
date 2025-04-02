@@ -58,9 +58,9 @@ private:
 	unsigned char* randomPattern;
 
 
-	int* gradHist;
-	float* ths;
-	float* thsSmoothed;
+	int* gradHist;							//!< 根号梯度平方和分布直方图, gradHist[0]为所有像素个数
+	float* ths;								//!< 平滑之前的阈值
+	float* thsSmoothed;						//!< 平滑后的阈值
 	int thsStep;
 	const FrameHessian* gradHistFrame;
 };

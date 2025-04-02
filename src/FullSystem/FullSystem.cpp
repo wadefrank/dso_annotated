@@ -837,8 +837,8 @@ void FullSystem::addActiveFrame( ImageAndExposure* image, int id )
 
 	//[ ***step 2*** ] 创建FrameHessian和FrameShell, 并进行相应初始化, 并存储所有帧
 	// =========================== add into allFrameHistory =========================
-	FrameHessian* fh = new FrameHessian();
-	FrameShell* shell = new FrameShell();
+	FrameHessian* fh = new FrameHessian();	// 帧
+	FrameShell* shell = new FrameShell();	// 帧的简化版本，包含帧的一些主要信息（如位姿、光度系数等）
 	shell->camToWorld = SE3(); 		// no lock required, as fh is not used anywhere yet.
 	shell->aff_g2l = AffLight(0,0);
     shell->marginalizedAt = shell->id = allFrameHistory.size();
